@@ -6,4 +6,4 @@ searchController = require('../Controllers/getPricesApi')
 router.get('/search', searchController.getPricesApi)
 
 
-module.exports = router;
+module.exports = router;  
