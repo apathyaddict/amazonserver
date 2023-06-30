@@ -128,6 +128,8 @@ function parseResponse(itemsResponseList) {
 //   }
 // }
 
+// first version: works!
+
 // function onError(error) {
 //   console.log('Error calling PA-API 5.0!');
 //   console.log('Printing Full Error Object:\n' + JSON.stringify(error, null, 1));
@@ -137,23 +139,74 @@ function parseResponse(itemsResponseList) {
 //   }
 // }
 
-function getPricesApi(req, res) {
-console.log(req.query)
-let ASIN = req.query.asin;
-  //let ASIN = ['B086WN6C7W']
-  console.log(ASIN)
-  // set the ItemIds for the getItemsRequest
-  getItemsRequest["ItemIds"] = ASIN;
+// function getPricesApi(req, res) {
+// console.log(req.query)
+// let ASIN = req.query.asin;
+  
+//   console.log(ASIN)
+//   // set the ItemIds for the getItemsRequest
+//   getItemsRequest["ItemIds"] = ASIN;
 
-  api
-    .getItems(getItemsRequest)
-    .then((data) => {
-      let getItemsResponse =
-        ProductAdvertisingAPIv1.GetItemsResponse.constructFromObject(data);
-      if (getItemsResponse["Errors"] !== undefined) {
-        res.status(400).json(getItemsResponse["Errors"]);
+//   api
+//     .getItems(getItemsRequest)
+//     .then((data) => {
+//       let getItemsResponse =
+//         ProductAdvertisingAPIv1.GetItemsResponse.constructFromObject(data);
+//       if (getItemsResponse["Errors"] !== undefined) {
+//         res.status(400).json(getItemsResponse["Errors"]);
+//       } else {
+//         res.status(200).json(getItemsResponse);
+//       }
+//     })
+//     .catch((error) => {
+//       console.log("Error calling PA-API 5.0!");
+//       console.log(
+//         "Printing Full Error Object:\n" + JSON.stringify(error, null, 1)
+//       );
+//       console.log("Status Code: " + error["status"]);
+//       if (
+//         error["response"] !== undefined &&
+//         error["response"]["text"] !== undefined
+//       ) {
+//         console.log(
+//           "Error Object: " + JSON.stringify(error["response"]["text"], null, 1)
+//         );
+//       }
+//     });
+// }
+
+function getPricesApi(req, res) {
+  let ASINs = req.query.asin;
+
+  // Function to split the array into chunks
+  const chunk = (array, size) =>
+    Array.from({ length: Math.ceil(array.length / size) }, (v, i) =>
+      array.slice(i * size, i * size + size)
+    );
+  
+  // Split the ASINs into chunks of 10
+  let ASINChunks = chunk(ASINs, 10);
+
+  // Map each chunk to a Promise that will resolve to the API's response
+  let promises = ASINChunks.map(chunk => {
+    getItemsRequest["ItemIds"] = chunk;
+    
+    return api.getItems(getItemsRequest);
+  });
+
+  // Wait for all Promises to resolve
+  Promise.all(promises)
+    .then(data => {
+      let responses = data.map(item => 
+        ProductAdvertisingAPIv1.GetItemsResponse.constructFromObject(item)
+      );
+      
+      let errors = responses.filter(response => response["Errors"] !== undefined);
+      
+      if(errors.length > 0) {
+        res.status(400).json(errors);
       } else {
-        res.status(200).json(getItemsResponse);
+        res.status(200).json(responses);
       }
     })
     .catch((error) => {
@@ -172,5 +225,6 @@ let ASIN = req.query.asin;
       }
     });
 }
+
 
 module.exports = { getPricesApi };
