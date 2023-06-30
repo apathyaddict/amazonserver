@@ -201,7 +201,8 @@ function getPricesApi(req, res) {
       ProductAdvertisingAPIv1.GetItemsResponse.constructFromObject(item)
     );
     
-    let successfulResponses = responses.filter(response => response["Errors"] === undefined);
+    // Flatmap can be used here to flatten the array of responses
+    let successfulResponses = responses.flatMap(response => response["Errors"] === undefined ? response : []);
     
     if (successfulResponses.length > 0) {
       res.status(200).json(successfulResponses);
@@ -226,6 +227,7 @@ function getPricesApi(req, res) {
   });
 
 }
+
 
 
 module.exports = { getPricesApi };
