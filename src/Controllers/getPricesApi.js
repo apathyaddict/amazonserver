@@ -196,34 +196,35 @@ function getPricesApi(req, res) {
 
   // Wait for all Promises to resolve
   Promise.all(promises)
-    .then(data => {
-      let responses = data.map(item => 
-        ProductAdvertisingAPIv1.GetItemsResponse.constructFromObject(item)
-      );
-      
-      let errors = responses.filter(response => response["Errors"] !== undefined);
-      
-      if(errors.length > 0) {
-        res.status(400).json(errors);
-      } else {
-        res.status(200).json(responses);
-      }
-    })
-    .catch((error) => {
-      console.log("Error calling PA-API 5.0!");
+  .then(data => {
+    let responses = data.map(item => 
+      ProductAdvertisingAPIv1.GetItemsResponse.constructFromObject(item)
+    );
+    
+    let successfulResponses = responses.filter(response => response["Errors"] === undefined);
+    
+    if (successfulResponses.length > 0) {
+      res.status(200).json(successfulResponses);
+    } else {
+      res.status(400).json(responses);
+    }
+  })
+  .catch((error) => {
+    console.log("Error calling PA-API 5.0!");
+    console.log(
+      "Printing Full Error Object:\n" + JSON.stringify(error, null, 1)
+    );
+    console.log("Status Code: " + error["status"]);
+    if (
+      error["response"] !== undefined &&
+      error["response"]["text"] !== undefined
+    ) {
       console.log(
-        "Printing Full Error Object:\n" + JSON.stringify(error, null, 1)
+        "Error Object: " + JSON.stringify(error["response"]["text"], null, 1)
       );
-      console.log("Status Code: " + error["status"]);
-      if (
-        error["response"] !== undefined &&
-        error["response"]["text"] !== undefined
-      ) {
-        console.log(
-          "Error Object: " + JSON.stringify(error["response"]["text"], null, 1)
-        );
-      }
-    });
+    }
+  });
+
 }
 
 
