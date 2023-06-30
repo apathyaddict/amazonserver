@@ -13,12 +13,7 @@
           }
         ]
       }
-    ],
-    "rewrites": [
-      {
-          "source": "/(.*)",
-          "destination": "/"
-      }
-  ]
+    ]
+
   }
   
