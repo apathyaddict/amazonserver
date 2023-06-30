@@ -1,4 +1,4 @@
-const port = 3002; // Choose a port number
+
 const cors = require("cors");
 const express = require('express');
 const bodyParser = require('body-parser');
@@ -8,11 +8,14 @@ const app = express();
 
 app.use(bodyParser.json());
 app.use(express.json());
-app.use(cors())
+app.use(cors({ origin: ['https://www.amazon.com']}))
+
+//app.use(cors())
 
 app.use('/', search);
 
 
-app.listen(port, () => {
-  console.log(`Server is running on port ${port}`);
+const PORT = process.env.PORT || 3002;
+app.listen(PORT, () => {
+  console.log(`Server runing on ${PORT}`);
 });
