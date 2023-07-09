@@ -59,6 +59,8 @@ getItemsRequest["Resources"] = [
   "Images.Primary.Medium",
   "ItemInfo.Title",
   "Offers.Listings.Price",
+  //FIXME: only need this and no other change for lambda - everything can be done in front end.
+   "BrowseNodeInfo.BrowseNodes",
 ];
 
 /**
@@ -138,39 +140,75 @@ function parseResponse(itemsResponseList) {
 // }
 
 function getPricesApi(req, res) {
-console.log(req.query)
-let ASIN = req.query.asin;
-  //let ASIN = ['B086WN6C7W']
-  console.log(ASIN)
-  // set the ItemIds for the getItemsRequest
-  getItemsRequest["ItemIds"] = ASIN;
+  let ASIN = req.query.asin;
 
-  api
-    .getItems(getItemsRequest)
-    .then((data) => {
-      let getItemsResponse =
-        ProductAdvertisingAPIv1.GetItemsResponse.constructFromObject(data);
-      if (getItemsResponse["Errors"] !== undefined) {
-        res.status(400).json(getItemsResponse["Errors"]);
+  // Ensure that ASIN is an array
+  if (!Array.isArray(ASIN)) {
+    ASIN = [ASIN]; // Convert single ASIN to an array
+  }
+
+  // Split the ASIN array into chunks of 10
+  const ASINChunks = [];
+  while (ASIN.length > 0) {
+    ASINChunks.push(ASIN.splice(0, 10));
+  }
+
+  // Process ASIN chunks asynchronously
+  const promises = ASINChunks.map((chunk) => {
+    getItemsRequest["ItemIds"] = chunk;
+    getItemsRequest["Resources"] = [
+      "Images.Primary.Medium",
+      "ItemInfo.Title",
+      "Offers.Listings.Price",
+      "BrowseNodeInfo.BrowseNodes",
+    ];
+
+    return api.getItems(getItemsRequest);
+  });
+
+  Promise.all(promises)
+    .then((results) => {
+      const getItemsResponses = results.map((data) =>
+        ProductAdvertisingAPIv1.GetItemsResponse.constructFromObject(data)
+      );
+
+      const mergedResponse = mergeResponses(getItemsResponses);
+
+      if (mergedResponse["Errors"] !== undefined) {
+        res.status(400).json(mergedResponse["Errors"]);
       } else {
-        res.status(200).json(getItemsResponse);
+        res.status(200).json(mergedResponse);
       }
     })
     .catch((error) => {
       console.log("Error calling PA-API 5.0!");
-      console.log(
-        "Printing Full Error Object:\n" + JSON.stringify(error, null, 1)
-      );
+      console.log("Printing Full Error Object:\n" + JSON.stringify(error, null, 1));
       console.log("Status Code: " + error["status"]);
-      if (
-        error["response"] !== undefined &&
-        error["response"]["text"] !== undefined
-      ) {
+
+      if (error["response"] !== undefined && error["response"]["text"] !== undefined) {
         console.log(
-          "Error Object: " + JSON.stringify(error["response"]["text"], null, 1)
+          "Error Object: " +
+            JSON.stringify(error["response"]["text"], null, 1)
         );
       }
     });
 }
+
+function mergeResponses(responses) {
+  const mergedResponse = {
+    ItemsResult: {
+      Items: [],
+    },
+  };
+
+  responses.forEach((response) => {
+    if (response.ItemsResult && response.ItemsResult.Items) {
+      mergedResponse.ItemsResult.Items.push(...response.ItemsResult.Items);
+    }
+  });
+
+  return mergedResponse;
+}
+
 
 module.exports = { getPricesApi };
